@@ -140,7 +140,10 @@ public class AliyunOSSClient {
 					}
 				}
 			}
-		} catch (Exception e) {
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new AliyunOSSException(e.getMessage(), e.getCause());
+		} catch (InterruptedException e){
 			e.printStackTrace();
 			throw new AliyunOSSException(e.getMessage(), e.getCause());
 		}
