@@ -124,7 +124,8 @@ public class AliyunOSSPublisher extends Publisher {
 				return FormValidation.error("阿里云EndPointSuffix不能为空！");
 			}
 			try {
-				AliyunOSSClient.validateAliyunAccount(aliyunAccessKey, aliyunSecretKey);
+				AliyunOSSClient.validateAliyunAccount(aliyunEndPointSuffix,
+						aliyunAccessKey, aliyunSecretKey);
 			} catch (Exception e) {
 				return FormValidation.error(e.getMessage());
 			}
@@ -137,8 +138,8 @@ public class AliyunOSSPublisher extends Publisher {
 				return FormValidation.error("Bucket不能为空！");
 			}
 			try {
-				AliyunOSSClient
-						.validateOSSBucket(aliyunAccessKey, aliyunSecretKey, val);
+				AliyunOSSClient.validateOSSBucket(aliyunEndPointSuffix,
+						aliyunAccessKey, aliyunSecretKey, val);
 			} catch (Exception e) {
 				return FormValidation.error(e.getMessage());
 			}

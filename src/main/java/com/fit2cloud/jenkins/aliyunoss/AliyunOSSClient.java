@@ -7,6 +7,7 @@ import hudson.model.AbstractBuild;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.FileNameMap;
+import java.net.URI;
 import java.net.URLConnection;
 import java.util.StringTokenizer;
 
@@ -19,23 +20,46 @@ public class AliyunOSSClient {
 	private static final String FP_SEPARATOR = ";";
 	private static final String BASE_HTTP_PROTOCOL = "https://";
 
-	public static boolean validateAliyunAccount(final String aliyunAccessKey,
-			final String aliyunSecretKey) throws AliyunOSSException {
+	// private static final String TEST_ENDPOINT =
+	// "oss-cn-shanghai-finance-1-pub.aliyuncs.com";
+
+	// public static void main(String[] args) {
+	// try {
+	// validateAliyunAccount(TEST_ENDPOINT, "LTAI9N8FV8Zuwinx",
+	// "lT1A8bO7ZDAK94SbSHca9ajlLimgLl");
+	// validateOSSBucket(TEST_ENDPOINT, "LTAI9N8FV8Zuwinx",
+	// "lT1A8bO7ZDAK94SbSHca9ajlLimgLl", "fqgj-android-new");
+	// } catch (AliyunOSSException e) {
+	// e.printStackTrace();
+	// }
+	// }
+
+	public static boolean validateAliyunAccount(String endpoint,
+			String aliyunAccessKey, String aliyunSecretKey) throws AliyunOSSException {
 		try {
-			OSSClient client = new OSSClient(aliyunAccessKey, aliyunSecretKey);
-			client.listBuckets();
+			OSSClient client = new OSSClient(BASE_HTTP_PROTOCOL + endpoint,
+					aliyunAccessKey, aliyunSecretKey);
+			URI endpointUri = client.getEndpoint();
+			System.out.println("client.getEndpoint() = " + endpointUri.toString());
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new AliyunOSSException("阿里云账号验证失败：" + e.getMessage());
 		}
 		return true;
 	}
 
-	public static boolean validateOSSBucket(String aliyunAccessKey,
-			String aliyunSecretKey, String bucketName) throws AliyunOSSException {
+	public static boolean validateOSSBucket(String endpoint,
+			String aliyunAccessKey, String aliyunSecretKey, String bucketName)
+			throws AliyunOSSException {
 		try {
-			OSSClient client = new OSSClient(aliyunAccessKey, aliyunSecretKey);
-			client.getBucketLocation(bucketName);
+			OSSClient client = new OSSClient(BASE_HTTP_PROTOCOL + endpoint,
+					aliyunAccessKey, aliyunSecretKey);
+			String location = client.getBucketLocation(bucketName);
+			boolean existed = client.doesBucketExist(bucketName);
+			System.out.println("location = " + location);
+			System.out.println("is bucket existed = " + existed);
 		} catch (Exception e) {
+			e.printStackTrace();
 			throw new AliyunOSSException("验证Bucket名称失败：" + e.getMessage());
 		}
 		return true;
@@ -45,12 +69,9 @@ public class AliyunOSSClient {
 			final String aliyunAccessKey, final String aliyunSecretKey,
 			final String aliyunEndPointSuffix, String bucketName, String expFP,
 			String expVP) throws AliyunOSSException {
-		OSSClient client = new OSSClient(aliyunAccessKey, aliyunSecretKey);
-		String location = client.getBucketLocation(bucketName);
-		String endpoint = BASE_HTTP_PROTOCOL + location + aliyunEndPointSuffix;
-		String baseUploadUrl = BASE_HTTP_PROTOCOL + bucketName + "." + location
-				+ aliyunEndPointSuffix;
-		client = new OSSClient(endpoint, aliyunAccessKey, aliyunSecretKey);
+		String finalEndpoint = BASE_HTTP_PROTOCOL + aliyunEndPointSuffix;
+		OSSClient client = new OSSClient(finalEndpoint, aliyunAccessKey,
+				aliyunSecretKey);
 		int filesUploaded = 0; // Counter to track no. of files that are uploaded
 		try {
 			FilePath workspacePath = build.getWorkspace();
@@ -61,9 +82,12 @@ public class AliyunOSSClient {
 			StringTokenizer strTokens = new StringTokenizer(expFP, FP_SEPARATOR);
 			FilePath[] paths = null;
 
+			String baseUploadUrl = BASE_HTTP_PROTOCOL + bucketName + "."
+					+ aliyunEndPointSuffix;
+
 			listener.getLogger().println("开始上传到阿里云OSS...");
-			listener.getLogger().println("上传endpoint是：" + endpoint);
-			listener.getLogger().println("上传baseUploadUrl是：" + baseUploadUrl);
+			listener.getLogger().println("上传 finalEndpoint 是：" + finalEndpoint);
+			listener.getLogger().println("上传 baseUploadUrl 是：" + baseUploadUrl);
 
 			while (strTokens.hasMoreElements()) {
 				String fileName = strTokens.nextToken();
@@ -127,7 +151,7 @@ public class AliyunOSSClient {
 						} finally {
 							try {
 								inputStream.close();
-							} catch (IOException e) {
+							} catch (IOException ignore) {
 							}
 						}
 						long endTime = System.currentTimeMillis();
@@ -143,7 +167,7 @@ public class AliyunOSSClient {
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new AliyunOSSException(e.getMessage(), e.getCause());
-		} catch (InterruptedException e){
+		} catch (InterruptedException e) {
 			e.printStackTrace();
 			throw new AliyunOSSException(e.getMessage(), e.getCause());
 		}
